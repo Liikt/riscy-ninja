@@ -1,0 +1,33 @@
+{
+  "pluginmetadataversion": 2,
+  "name": "riscy-ninja",
+  "author": "Liikt",
+  "type": [
+    "architecture"
+  ],
+  "api": [
+    "python3"
+  ],
+  "description": "RISC-V architecture plugin.",
+  "longdescription": "",
+  "license": {
+    "name": "",
+    "text": ""
+  },
+  "platforms": [
+    "Darwin",
+    "Windows",
+    "Linux"
+  ],
+  "installinstructions": {
+    "Darwin": "",
+    "Windows": "",
+    "Linux": ""
+  },
+  "dependencies": {
+    "pip": [
+    ]
+  },
+  "version": "0.2",
+  "minimumbinaryninjaversion": 0
+}
