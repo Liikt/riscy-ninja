@@ -10,7 +10,7 @@ class IntRegister(IntEnum):
     t0   = 5
     t1   = 6
     t2   = 7
-    fp   = 8
+    s0   = 8
     s1   = 9
     a0   = 10
     a1   = 11
