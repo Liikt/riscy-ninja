@@ -1,6 +1,6 @@
 from binaryninja import Architecture, Endianness, RegisterInfo
 
-from .rv32i import RV32IInstruction
+from .base_instruction import RiscVInstruction
 from .registers import all_regs
 
 class RISCV(Architecture):
@@ -19,11 +19,11 @@ class RISCV(Architecture):
     stack_pointer = "sp"
 
     def get_instruction_info(self, data, addr):
-        return RV32IInstruction(data, addr).info()
+        return RiscVInstruction(data, addr).info()
 
     def get_instruction_text(self, data, addr):
-        return RV32IInstruction(data, addr).token(), 4
+        return RiscVInstruction(data, addr).token(), 4
 
     def get_instruction_low_level_il(self, data, addr, il):
-        RV32IInstruction(data, addr).lift(il)
+        RiscVInstruction(data, addr).lift(il)
         return 4

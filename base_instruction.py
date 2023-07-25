@@ -62,9 +62,7 @@ def mem_end():
 def possible_address(addr):
     return InstructionTextToken(InstructionTextTokenType.PossibleAddressToken, hex(addr))
 
-class RV32IInstruction:
-    inst_size = 4
-
+class RiscVInstruction:
     def __init__(self, data, addr, little_endian=True):
         data = data[:4]
         try:
@@ -82,7 +80,7 @@ class RV32IInstruction:
         self.fm = None
         self.pred = None
         self.succ = None
-        self.size = 4
+        self.instr_size = 4
         self.type = None
 
     def is_branch(self):
