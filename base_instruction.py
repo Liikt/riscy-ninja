@@ -1,6 +1,7 @@
 from binaryninja import LLIL_TEMP, Architecture, LowLevelILLabel, log_warn, \
     InstructionTextToken, InstructionTextTokenType, InstructionInfo, BranchType
 
+from .compressed import CompressedInstruction
 from .registers import IntRegister
 from .utils import sign_extend
 
@@ -9,13 +10,13 @@ from struct import unpack, error
 
 branch_ins = {
     'beq', 'bne', 'beqz', 'bnez', 'bge', 'bgeu', 'blt', 'bltu', 'blez', 'bgez',
-    'bltz', 'bgtz'
+    'bltz', 'bgtz', 'c.beqz', 'c.bnez'
 }
 
-direct_jump_ins   = {'j'}
-indirect_jump_ins = {'jr'}
-direct_call_ins   = {'jal'}
-indirect_call_ins = {'jalr'}
+direct_jump_ins   = {'c.j', 'j'}
+indirect_jump_ins = {'c.jr', 'jr'}
+direct_call_ins   = {'c.jal', 'jal'}
+indirect_call_ins = {'c.jalr', 'jalr'}
 
 # R-Type
 OPCODE_BITS = lambda x: ((x >> 0)  & 0b1111111)
@@ -64,24 +65,33 @@ def possible_address(addr):
 
 class RiscVInstruction:
     def __init__(self, data, addr, little_endian=True):
-        data = data[:4]
-        try:
-            if little_endian:
-                self.data = unpack("<I", data)[0]
-            else:
-                self.data = unpack(">I", data)[0]
-        except error as e:
-            print(data, addr)
-            raise e
+        compressed = CompressedInstruction(data, addr)
+        compressed.disassemble()
         self.addr = addr
-        self.imm = None
-        self.name = ""
-        self.operands = []
+        self.operands = compressed.operands
+        self.name = compressed.name
+        self.imm = compressed.imm
+        self.type = compressed.type
+        self.instr_size = 2
+
+        if self.name == "c.li":
+            print(f"{self.name=} {self.imm=}")
+
+        if compressed.type is None:
+            self.instr_size = 4
+            data = data[:4]
+            try:
+                if little_endian:
+                    self.data = unpack("<I", data)[0]
+                else:
+                    self.data = unpack(">I", data)[0]
+            except error as e:
+                print(data, addr)
+                raise e
+
         self.fm = None
         self.pred = None
         self.succ = None
-        self.instr_size = 4
-        self.type = None
 
     def is_branch(self):
         return self.name in branch_ins
@@ -246,7 +256,7 @@ class RiscVInstruction:
         if self.name == 'jalr' and self.operands[0] == 'zero' and \
                 self.operands[1] == 'ra' and not self.imm:
             self.name = "ret"
-        elif self.name == 'jr' and self.operands[0] == 'ra' \
+        elif (self.name == 'jr' or self.name == 'c.jr') and self.operands[0] == 'ra' \
                 and not self.imm:
             self.name = "ret"
         elif self.name == "addi" and self.operands[0] == 'zero' and \
@@ -266,10 +276,12 @@ class RiscVInstruction:
             self.name = "j"
         elif self.name == "fence iorw,iorw":
             self.name = "fence"
+        elif self.name in ["c.li", "c.mv", "c.beqz", "c.bnez"]:
+            pass
         else:
             self.type = old
 
-    def disassemble(self):
+    def _disassemble(self):
         match OPCODE_BITS(self.data):
             case 0b0110011:
                 self.r_type()
@@ -286,14 +298,16 @@ class RiscVInstruction:
             case 0b1110011:
                 self.ecall()
 
+    def disassemble(self):
+        if self.type is None:
+            self._disassemble()
         self.pseudo_instruction()
 
     def info(self):
-        if not self.name:
-            self.disassemble()
+        self.disassemble()
 
         result = InstructionInfo()
-        result.length = self.size
+        result.length = self.instr_size
 
         dest = None if self.imm is None else self.addr + self.imm
 
@@ -301,7 +315,7 @@ class RiscVInstruction:
             result.add_branch(BranchType.FunctionReturn)
         elif self.is_branch():
             result.add_branch(BranchType.TrueBranch, dest)
-            result.add_branch(BranchType.FalseBranch, self.addr + self.size)
+            result.add_branch(BranchType.FalseBranch, self.addr + self.instr_size)
         elif self.is_direct_jump():
             result.add_branch(BranchType.UnconditionalBranch, dest)
         elif self.is_indirect_jump():
@@ -316,56 +330,72 @@ class RiscVInstruction:
         match self.name:
             case "ret" | "nop" | "fence":
                 pass
-            case "mv":
+            case "mv" | "c.mv":
                 token.append(reg(self.operands[0]))
                 token.append(op_sep())
                 token.append(reg(self.operands[1]))
             case "j":
                 token.append(possible_address(self.addr + self.imm))
+            case "li" | "c.li":
+                token.append(reg(self.operands[0]))
+                token.append(op_sep())
+                token.append(imm(self.imm))
+            case "c.beqz" | "c.bnez":
+                token.append(reg(self.operands[0]))
             case other:
                 log_warn(f"Can't get token for pseudo instruction {self.name}")
 
     def token(self):
-        if not self.name:
-            self.disassemble()
+        self.disassemble()
 
         info = [inst(self.name.ljust(17))]
 
         match self.type:
-            case "r":
+            case "r" | "cr":
                 info.append(reg(self.operands[0]))
                 info.append(op_sep())
                 info.append(reg(self.operands[1]))
                 info.append(op_sep())
                 info.append(reg(self.operands[2]))
-            case "i":
-                if not self.name.startswith("fence"):
-                    info.append(reg(self.operands[0]))
+            case "i" | "ci":
+                if self.name.startswith("fence"):
+                    pass
+
+                info.append(reg(self.operands[0]))
+                info.append(op_sep())
+                if self.name.startswith("l"):
+                    info.append(imm(self.imm))
+                    info.append(mem_start())
+                    info.append(reg(self.operands[1]))
+                    info.append(mem_end())
+                elif "jalr" in self.name:
+                    info.append(imm(self.imm))
+                    info.append(mem_start())
+                    info.append(reg(self.operands[1]))
+                    info.append(mem_end())
+                else:
+                    info.append(reg(self.operands[1]))
                     info.append(op_sep())
-                    if self.name.startswith("l"):
-                        info.append(imm(self.imm))
-                        info.append(mem_start())
-                        info.append(reg(self.operands[1]))
-                        info.append(mem_end())
-                    else:
-                        info.append(reg(self.operands[1]))
-                        info.append(op_sep())
-                        info.append(imm(self.imm))
-            case "s":
+                    info.append(imm(self.imm))
+            case "s" | "cs" | "css":
                 info.append(reg(self.operands[0]))
                 info.append(op_sep())
                 info.append(imm(self.imm))
                 info.append(mem_start())
                 info.append(reg(self.operands[1]))
                 info.append(mem_end())
-            case "b":
+            case "b" | "cb":
                 info.append(reg(self.operands[0]))
                 info.append(op_sep())
                 info.append(reg(self.operands[1]))
                 info.append(op_sep())
                 info.append(possible_address(self.addr + self.imm))
-            case "u":
-                info.append(reg(self.operands[0]))
+            case "u" | "cu":
+                try:
+                    info.append(reg(self.operands[0]))
+                except KeyError as e:
+                    print(f"{self.name=}")
+                    raise e
                 info.append(op_sep())
                 info.append(imm(self.imm))
             case "j":
@@ -376,9 +406,18 @@ class RiscVInstruction:
                 pass
             case "pseudo":
                 self._pseudo_instr_token(info)
-            case other:
+            case "cj":
+                info.append(possible_address(self.addr + self.imm))
+            case "cl":
+                info.append(reg(self.operands[0]))
+                info.append(op_sep())
+                info.append(imm(self.imm))
+                info.append(mem_start())
+                info.append(reg(self.operands[1]))
+                info.append(mem_end())
+            case _:
                 log_warn(f"Don't know {self.type} instruction type")
-        return info
+        return info, self.instr_size
 
     def _set_reg(self, il, reg, val):
         il.append(il.set_reg(4, reg, val))
@@ -425,14 +464,15 @@ class RiscVInstruction:
         il.append(il.store(size, offset, val))
 
     def lift(self, il):
-        if not self.name:
-            self.disassemble()
+        self.disassemble()
 
         if self.imm is not None:
             label = il.get_label_for_address(Architecture["riscv"],
                                         self.addr + self.imm)
 
-        match self.name:
+        name = self.name[2:] if self.name.startswith("c.") else self.name
+
+        match name:
             case "lui":
                 self._set_reg_const(il, self.operands[0], self.imm << 12)
             case "auipc":
@@ -452,7 +492,7 @@ class RiscVInstruction:
                 self._set_reg_reg(il, LLIL_TEMP(0), self.operands[1])
                 base = il.reg(4, LLIL_TEMP(0))
                 if self.operands[0] != "zero":
-                    self._set_reg_const(il, self.operands[0], self.addr + 4)
+                    self._set_reg_const(il, self.operands[0], self.addr + self.instr_size)
                 dest = base
                 if self.imm:
                     self._set_reg(il, LLIL_TEMP(0), il.add(4, base, il.const(4, self.imm)))
@@ -465,8 +505,12 @@ class RiscVInstruction:
                 il.append(il.ret(il.reg(4, 'ra')))
             case "beq":
                 self._branch(il, il.compare_equal, self)
+            case "beqz":
+                self._branch(il, il.compare_equal, self, zero=True)
             case "bne":
                 self._branch(il, il.compare_not_equal, self)
+            case "bnez":
+                self._branch(il, il.compare_not_equal, self, zero=True)
             case "blt":
                 self._branch(il, il.compare_signed_less_than, self)
             case "bge":
@@ -559,5 +603,9 @@ class RiscVInstruction:
                 il.append(il.breakpoint())
             case "mv":
                 self._set_reg_reg(il, self.operands[0], self.operands[1])
+            case "li":
+                self._set_reg_const(il, self.operands[0], self.imm)
             case other:
                 log_warn(f"Can't lift instruction {self.name}")
+
+        return self.instr_size

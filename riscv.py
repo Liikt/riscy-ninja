@@ -22,8 +22,7 @@ class RISCV(Architecture):
         return RiscVInstruction(data, addr).info()
 
     def get_instruction_text(self, data, addr):
-        return RiscVInstruction(data, addr).token(), 4
+        return RiscVInstruction(data, addr).token()
 
     def get_instruction_low_level_il(self, data, addr, il):
-        RiscVInstruction(data, addr).lift(il)
-        return 4
+        return RiscVInstruction(data, addr).lift(il)
