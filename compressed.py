@@ -366,6 +366,8 @@ class CompressedInstruction:
                 self.operands.append(IntRegister(reg1).name)
                 self.operands.append(IntRegister(reg1).name)
                 self.operands.append(IntRegister(reg2).name)
+                self.name = "c.add"
+                self.type = "ca"
             else:
                 log_debug("erroneous compressed instruction")
                 return
