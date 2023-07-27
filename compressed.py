@@ -4,6 +4,7 @@ from binaryninja import InstructionTextToken, InstructionTextTokenType, \
 from struct import unpack, error
 
 from .registers import IntRegister
+from .utils import extract_bit
 
 direct_jump_ins   = {'c.j'}
 indirect_jump_ins = {'c.jr'}
@@ -51,8 +52,6 @@ JUMP_TGT_BITS = lambda x: ((x >> 2) & 0b11111111111)
 
 def inst(cont):
     return InstructionTextToken(InstructionTextTokenType.InstructionToken, cont)
-
-
 def reg(cont):
     return InstructionTextToken(InstructionTextTokenType.RegisterToken, cont)
 def op_sep():
@@ -177,10 +176,10 @@ class CompressedInstruction:
             else:
                 imm = JUMP_TGT_BITS(self.data)
                 self.operands.append("ra")
-                self.imm = ((imm >> 11) & 0b1) << 11 | ((imm >> 7) & 0b1) << 10 | \
-                    ((imm >> 8) & 0b11) << 8 | ((imm >> 4) & 0b1) << 7 | \
-                    ((imm >> 5) & 0b1) << 6 | (imm & 0b1) << 5 | ((imm >> 10) & 0b1) << 4 | \
-                    ((imm >> 1) * 0b111) << 1
+                self.imm = extract_bit(imm, 10, 1) << 11 | extract_bit(imm, 6, 1) << 10 | \
+                    extract_bit(imm, 7, 2) << 8 | extract_bit(imm, 4, 1) << 7 | \
+                    extract_bit(imm, 5, 1) << 6 | extract_bit(imm, 0, 1) << 5 | \
+                    extract_bit(imm, 9, 1) << 4 | extract_bit(imm, 1, 3) << 1
                 self.name = "c.jal"
                 self.type = "cj"
 
@@ -282,10 +281,10 @@ class CompressedInstruction:
 
         elif op == 0b01 and funct3 == 0b101:
             imm = JUMP_TGT_BITS(self.data)
-            self.imm = ((imm >> 11) & 0b1) << 11 | ((imm >> 7) & 0b1) << 10 | \
-                ((imm >> 8) & 0b11) << 8 | ((imm >> 4) & 0b1) << 7 | \
-                ((imm >> 5) & 0b1) << 6 | (imm & 0b1) << 5 | ((imm >> 10) & 0b1) << 4 | \
-                ((imm >> 1) * 0b111) << 1
+            self.imm = extract_bit(imm, 10, 1) << 11 | extract_bit(imm, 6, 1) << 10 | \
+                extract_bit(imm, 7, 2) << 8 | extract_bit(imm, 4, 1) << 7 | \
+                extract_bit(imm, 5, 1) << 6 | extract_bit(imm, 0, 1) << 5 | \
+                extract_bit(imm, 9, 1) << 4 | extract_bit(imm, 1, 3) << 1
             self.name = "c.j"
             self.type = "cj"
 
