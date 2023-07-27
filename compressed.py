@@ -326,7 +326,7 @@ class CompressedInstruction:
             self.operands.append("sp")
             self.imm = (lo & 0b11) << 6 | hi << 5 | (lo >> 2) << 4
             self.name = "c.lwsp"
-            self.type = "ci"
+            self.type = "css"
 
         elif op == 0b10 and funct3 == 0b011:
             log_warn("c.flwsp and c.ldsp not yet supported")
