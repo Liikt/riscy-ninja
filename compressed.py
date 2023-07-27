@@ -181,6 +181,7 @@ class CompressedInstruction:
                     extract_bit(imm, 7, 2) << 8 | extract_bit(imm, 4, 1) << 7 | \
                     extract_bit(imm, 5, 1) << 6 | extract_bit(imm, 0, 1) << 5 | \
                     extract_bit(imm, 9, 1) << 4 | extract_bit(imm, 1, 3) << 1
+                self.imm = sign_extend(self.imm, 11)
                 self.name = "c.jal"
                 self.type = "cj"
 
@@ -286,6 +287,7 @@ class CompressedInstruction:
                 extract_bit(imm, 7, 2) << 8 | extract_bit(imm, 4, 1) << 7 | \
                 extract_bit(imm, 5, 1) << 6 | extract_bit(imm, 0, 1) << 5 | \
                 extract_bit(imm, 9, 1) << 4 | extract_bit(imm, 1, 3) << 1
+            self.imm = sign_extend(self.imm, 11)
             self.name = "c.j"
             self.type = "cj"
 
