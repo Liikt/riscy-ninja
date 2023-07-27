@@ -353,7 +353,7 @@ class RiscVInstruction:
         info = [inst(self.name.ljust(17))]
 
         match self.type:
-            case "r" | "cr":
+            case "r" | "cr" | "ca":
                 info.append(reg(self.operands[0]))
                 info.append(op_sep())
                 info.append(reg(self.operands[1]))

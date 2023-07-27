@@ -240,29 +240,29 @@ class CompressedInstruction:
 
             elif funct6 == 0b11 and funct2 == 0b00 and not hi:
                 self.operands.append(IntRegister(RDP_BITS(self.data)+8).name)
-                self.operands.append(IntRegister(RS1P_BITS(self.data)+8).name)
                 self.operands.append(IntRegister(RS2P_BITS(self.data)+8).name)
+                self.operands.append(IntRegister(RS1P_BITS(self.data)+8).name)
                 self.name = "c.sub"
                 self.type = "ca"
 
             elif funct6 == 0b11 and funct2 == 0b01 and not hi:
                 self.operands.append(IntRegister(RDP_BITS(self.data)+8).name)
-                self.operands.append(IntRegister(RS1P_BITS(self.data)+8).name)
                 self.operands.append(IntRegister(RS2P_BITS(self.data)+8).name)
+                self.operands.append(IntRegister(RS1P_BITS(self.data)+8).name)
                 self.name = "c.xor"
                 self.type = "ca"
 
             elif funct6 == 0b11 and funct2 == 0b10 and not hi:
                 self.operands.append(IntRegister(RDP_BITS(self.data)+8).name)
-                self.operands.append(IntRegister(RS1P_BITS(self.data)+8).name)
                 self.operands.append(IntRegister(RS2P_BITS(self.data)+8).name)
+                self.operands.append(IntRegister(RS1P_BITS(self.data)+8).name)
                 self.name = "c.or"
                 self.type = "ca"
 
             elif funct6 == 0b11 and funct2 == 0b11 and not hi:
                 self.operands.append(IntRegister(RDP_BITS(self.data)+8).name)
-                self.operands.append(IntRegister(RS1P_BITS(self.data)+8).name)
                 self.operands.append(IntRegister(RS2P_BITS(self.data)+8).name)
+                self.operands.append(IntRegister(RS1P_BITS(self.data)+8).name)
                 self.name = "c.and"
                 self.type = "ca"
 
