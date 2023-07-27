@@ -217,6 +217,7 @@ class RiscVInstruction:
         self.operands.append(IntRegister(RS2_BITS(self.data)).name)
         self.imm = IMMB_12_BIT(self.data) << 12 | IMMB_11_BIT(self.data) << 11 |\
             IMMB_HI_BITS(self.data) << 5 | IMMB_LO_BITS(self.data) << 1
+        self.imm = sign_extend(self.imm, 11)
         self.type = "b"
 
         match FUNCT3_BITS(self.data):
