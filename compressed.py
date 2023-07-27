@@ -294,16 +294,20 @@ class CompressedInstruction:
         elif op == 0b01 and funct3 == 0b110:
             self.operands.append(IntRegister(RS1P_BITS(self.data)+8).name)
             hi, lo = (OFFSET_HI_BITS(self.data), OFFSET_LO_BITS(self.data))
-            self.imm = (hi >> 3) << 8 | (lo >> 4) << 6 | (lo & 0b1) << 5 | (hi & 0b11) << 3 | \
-                ((lo >> 1) & 0b11) << 1
+            self.imm = extract_bit(hi, 2, 1) << 8 | extract_bit(lo, 3, 2) << 6 | \
+                extract_bit(lo, 0, 1) << 5 | extract_bit(hi, 0, 2) << 3 | \
+                extract_bit(lo, 1, 2) << 1
+            self.imm = sign_extend(self.imm, 8)
             self.name = "c.beqz"
             self.type = "cb"
 
         elif op == 0b01 and funct3 == 0b111:
             self.operands.append(IntRegister(RS1P_BITS(self.data)+8).name)
             hi, lo = (OFFSET_HI_BITS(self.data), OFFSET_LO_BITS(self.data))
-            self.imm = (hi >> 3) << 8 | (lo >> 4) << 6 | (lo & 0b1) << 5 | (hi & 0b11) << 3 | \
-                ((lo >> 1) & 0b11) << 1
+            self.imm = extract_bit(hi, 2, 1) << 8 | extract_bit(lo, 3, 2) << 6 | \
+                extract_bit(lo, 0, 1) << 5 | extract_bit(hi, 0, 2) << 3 | \
+                extract_bit(lo, 1, 2) << 1
+            self.imm = sign_extend(self.imm, 8)
             self.name = "c.bnez"
             self.type = "cb"
 
