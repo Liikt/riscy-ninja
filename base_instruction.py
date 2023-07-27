@@ -162,14 +162,19 @@ class RiscVInstruction:
                 else:
                     self.name = f"fence {pred},{succ}"
             case (0b0000011, 0b000):
+                self.imm = sign_extend(self.imm, 12)
                 self.name = "lb"
             case (0b0000011, 0b100):
+                self.imm = sign_extend(self.imm, 12)
                 self.name = "lbu"
             case (0b0000011, 0b001):
+                self.imm = sign_extend(self.imm, 12)
                 self.name = "lh"
             case (0b0000011, 0b101):
+                self.imm = sign_extend(self.imm, 12)
                 self.name = "lhu"
             case (0b0000011, 0b010):
+                self.imm = sign_extend(self.imm, 12)
                 self.name = "lw"
             case (0b0010011, 0b000):
                 self.name = "addi"
@@ -196,6 +201,7 @@ class RiscVInstruction:
         self.operands.append(IntRegister(RS2_BITS(self.data)).name)
         self.operands.append(IntRegister(RS1_BITS(self.data)).name)
         self.imm = IMMS_HI_BITS(self.data) << 5 | IMMS_LO_BITS(self.data)
+        self.imm = sign_extend(self.imm, 12)
         self.type = "s"
 
         match FUNCT3_BITS(self.data):
