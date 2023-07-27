@@ -1,6 +1,7 @@
 from binaryninja import CallingConvention
 from enum import IntEnum
 
+
 class IntRegister(IntEnum):
     zero = 0
     ra   = 1
@@ -35,6 +36,7 @@ class IntRegister(IntEnum):
     t5   = 30
     t6   = 31
 
+
 special_regs = ["zero", "ra", "gp", "sp", "tp"]
 int_regs = [f"a{x}" for x in range(8)] + [f"s{x}" for x in range(0, 12)] + \
     [f"t{x}" for x in range(7)] + special_regs
@@ -42,10 +44,11 @@ float_regs = [f"fa{x}" for x in range(8)] + [f"fs{x}" for x in range(12)] + \
     [f"ft{x}" for x in range(12)]
 all_regs = int_regs + float_regs
 
-caller_saved = [x for x in int_regs if not "s" in x] + \
-    [x for x in float_regs if not "s" in x]
+caller_saved = [x for x in int_regs if "s" not in x] + \
+    [x for x in float_regs if "s" not in x]
 callee_saved = [x for x in int_regs if "s" in x] + \
     [x for x in float_regs if "s" in x]
+
 
 class RiscVRegisters(CallingConvention):
     name = "RiscV"

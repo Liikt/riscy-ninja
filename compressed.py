@@ -52,16 +52,28 @@ JUMP_TGT_BITS = lambda x: ((x >> 2) & 0b11111111111)
 
 def inst(cont):
     return InstructionTextToken(InstructionTextTokenType.InstructionToken, cont)
+
+
 def reg(cont):
     return InstructionTextToken(InstructionTextTokenType.RegisterToken, cont)
+
+
 def op_sep():
     return InstructionTextToken(InstructionTextTokenType.OperandSeparatorToken, ", ")
+
+
 def imm(i):
     return InstructionTextToken(InstructionTextTokenType.IntegerToken, hex(i))
+
+
 def mem_start():
     return InstructionTextToken(InstructionTextTokenType.BeginMemoryOperandToken, "(")
+
+
 def mem_end():
     return InstructionTextToken(InstructionTextTokenType.EndMemoryOperandToken, ")")
+
+
 def possible_address(addr):
     return InstructionTextToken(InstructionTextTokenType.PossibleAddressToken, hex(addr))
 
@@ -89,12 +101,16 @@ class CompressedInstruction:
 
     def is_branch(self):
         return self.name in branch_ins
+
     def is_direct_jump(self):
         return self.name in direct_jump_ins
+
     def is_indirect_jump(self):
         return self.name in indirect_jump_ins
+
     def is_direct_call(self):
         return self.name in direct_call_ins
+
     def is_indirect_call(self):
         return self.name in indirect_call_ins
 
@@ -124,7 +140,7 @@ class CompressedInstruction:
 
         elif op == 0b00 and funct3 == 0b010:
             self.operands.append(IntRegister(RDP_BITS(self.data) + 8).name)
-            self.operands.append(IntRegister(RS1P_BITS(self.data)+8).name)
+            self.operands.append(IntRegister(RS1P_BITS(self.data) + 8).name)
             hi = IMML_HI_BITS(self.data)
             lo = IMML_LO_BITS(self.data)
             self.imm = (lo & 0b1) << 6 | hi << 3 | (lo >> 1) << 2
@@ -144,8 +160,8 @@ class CompressedInstruction:
             return
 
         elif op == 0b00 and funct3 == 0b110:
-            self.operands.append(IntRegister(RS2P_BITS(self.data)+8).name)
-            self.operands.append(IntRegister(RS1P_BITS(self.data)+8).name)
+            self.operands.append(IntRegister(RS2P_BITS(self.data) + 8).name)
+            self.operands.append(IntRegister(RS1P_BITS(self.data) + 8).name)
             hi = IMML_HI_BITS(self.data)
             lo = IMML_LO_BITS(self.data)
             self.imm = (lo & 0b1) << 6 | hi << 3 | (lo >> 1) << 2
@@ -219,8 +235,8 @@ class CompressedInstruction:
                 if not (hi or lo):
                     log_warn("c.srli64 not yet supported")
                     return
-                self.operands.append(IntRegister(RDP_BITS(self.data)+8).name)
-                self.operands.append(IntRegister(RS1P_BITS(self.data)+8).name)
+                self.operands.append(IntRegister(RDP_BITS(self.data) + 8).name)
+                self.operands.append(IntRegister(RS1P_BITS(self.data) + 8).name)
                 self.imm = hi << 5 | lo
                 self.name = "c.srli"
                 self.type = "ci"
@@ -229,44 +245,44 @@ class CompressedInstruction:
                 if not (hi or lo):
                     log_warn("c.srai64 not yet supported")
                     return
-                self.operands.append(IntRegister(RDP_BITS(self.data)+8).name)
-                self.operands.append(IntRegister(RS1P_BITS(self.data)+8).name)
+                self.operands.append(IntRegister(RDP_BITS(self.data) + 8).name)
+                self.operands.append(IntRegister(RS1P_BITS(self.data) + 8).name)
                 self.imm = hi << 5 | lo
                 self.name = "c.srai"
                 self.type = "ci"
 
             elif funct6 == 0b10:
-                self.operands.append(IntRegister(RDP_BITS(self.data)+8).name)
-                self.operands.append(IntRegister(RS1P_BITS(self.data)+8).name)
+                self.operands.append(IntRegister(RDP_BITS(self.data) + 8).name)
+                self.operands.append(IntRegister(RS1P_BITS(self.data) + 8).name)
                 self.imm = hi << 5 | lo
                 self.name = "c.andi"
                 self.type = "ci"
 
             elif funct6 == 0b11 and funct2 == 0b00 and not hi:
-                self.operands.append(IntRegister(RS1P_BITS(self.data)+8).name)
-                self.operands.append(IntRegister(RS1P_BITS(self.data)+8).name)
-                self.operands.append(IntRegister(RS2P_BITS(self.data)+8).name)
+                self.operands.append(IntRegister(RS1P_BITS(self.data) + 8).name)
+                self.operands.append(IntRegister(RS1P_BITS(self.data) + 8).name)
+                self.operands.append(IntRegister(RS2P_BITS(self.data) + 8).name)
                 self.name = "c.sub"
                 self.type = "ca"
 
             elif funct6 == 0b11 and funct2 == 0b01 and not hi:
-                self.operands.append(IntRegister(RS1P_BITS(self.data)+8).name)
-                self.operands.append(IntRegister(RS1P_BITS(self.data)+8).name)
-                self.operands.append(IntRegister(RS2P_BITS(self.data)+8).name)
+                self.operands.append(IntRegister(RS1P_BITS(self.data) + 8).name)
+                self.operands.append(IntRegister(RS1P_BITS(self.data) + 8).name)
+                self.operands.append(IntRegister(RS2P_BITS(self.data) + 8).name)
                 self.name = "c.xor"
                 self.type = "ca"
 
             elif funct6 == 0b11 and funct2 == 0b10 and not hi:
-                self.operands.append(IntRegister(RS1P_BITS(self.data)+8).name)
-                self.operands.append(IntRegister(RS1P_BITS(self.data)+8).name)
-                self.operands.append(IntRegister(RS2P_BITS(self.data)+8).name)
+                self.operands.append(IntRegister(RS1P_BITS(self.data) + 8).name)
+                self.operands.append(IntRegister(RS1P_BITS(self.data) + 8).name)
+                self.operands.append(IntRegister(RS2P_BITS(self.data) + 8).name)
                 self.name = "c.or"
                 self.type = "ca"
 
             elif funct6 == 0b11 and funct2 == 0b11 and not hi:
-                self.operands.append(IntRegister(RS1P_BITS(self.data)+8).name)
-                self.operands.append(IntRegister(RS1P_BITS(self.data)+8).name)
-                self.operands.append(IntRegister(RS2P_BITS(self.data)+8).name)
+                self.operands.append(IntRegister(RS1P_BITS(self.data) + 8).name)
+                self.operands.append(IntRegister(RS1P_BITS(self.data) + 8).name)
+                self.operands.append(IntRegister(RS2P_BITS(self.data) + 8).name)
                 self.name = "c.and"
                 self.type = "ca"
 
@@ -294,7 +310,7 @@ class CompressedInstruction:
             self.type = "cj"
 
         elif op == 0b01 and funct3 == 0b110:
-            self.operands.append(IntRegister(RS1P_BITS(self.data)+8).name)
+            self.operands.append(IntRegister(RS1P_BITS(self.data) + 8).name)
             hi, lo = (OFFSET_HI_BITS(self.data), OFFSET_LO_BITS(self.data))
             self.imm = extract_bit(hi, 2, 1) << 8 | extract_bit(lo, 3, 2) << 6 | \
                 extract_bit(lo, 0, 1) << 5 | extract_bit(hi, 0, 2) << 3 | \
@@ -304,7 +320,7 @@ class CompressedInstruction:
             self.type = "cb"
 
         elif op == 0b01 and funct3 == 0b111:
-            self.operands.append(IntRegister(RS1P_BITS(self.data)+8).name)
+            self.operands.append(IntRegister(RS1P_BITS(self.data) + 8).name)
             hi, lo = (OFFSET_HI_BITS(self.data), OFFSET_LO_BITS(self.data))
             self.imm = extract_bit(hi, 2, 1) << 8 | extract_bit(lo, 3, 2) << 6 | \
                 extract_bit(lo, 0, 1) << 5 | extract_bit(hi, 0, 2) << 3 | \
@@ -318,8 +334,8 @@ class CompressedInstruction:
             if not (hi or lo):
                 log_warn("c.srli64 not yet supported")
                 return
-            self.operands.append(IntRegister(RDP_BITS(self.data)+8).name)
-            self.operands.append(IntRegister(RS1P_BITS(self.data)+8).name)
+            self.operands.append(IntRegister(RDP_BITS(self.data) + 8).name)
+            self.operands.append(IntRegister(RS1P_BITS(self.data) + 8).name)
             self.imm = hi << 5 | lo
             self.name = "c.slli"
             self.type = "ci"
@@ -377,6 +393,7 @@ class CompressedInstruction:
         elif op == 0b10 and funct3 == 0b101:
             log_warn("c.fsdsp and c.sqsp not yet supported")
             return
+
         elif op == 0b10 and funct3 == 0b110:
             imm = IMMSS_BITS(self.data)
             self.operands.append(IntRegister(RS_BITS(self.data)).name)
@@ -384,6 +401,7 @@ class CompressedInstruction:
             self.imm = (imm & 0b11) << 6 | ((imm >> 2) & 0b1111) << 2
             self.name = "c.swsp"
             self.type = "css"
+
         elif op == 0b10 and funct3 == 0b111:
             log_warn("c.fswsp and c.sdsp not yet supported")
             return

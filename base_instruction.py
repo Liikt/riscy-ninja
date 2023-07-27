@@ -48,20 +48,34 @@ IMMJ_LO_BITS = lambda x: ((x >> 21) & 0b1111111111)
 IMMJ_11_BIT  = lambda x: ((x >> 20) & 0b1         )
 IMMJ_HI_BITS = lambda x: ((x >> 12) & 0b11111111  )
 
+
 def inst(cont):
     return InstructionTextToken(InstructionTextTokenType.InstructionToken, cont)
+
+
 def reg(cont):
     return InstructionTextToken(InstructionTextTokenType.RegisterToken, cont)
+
+
 def op_sep():
     return InstructionTextToken(InstructionTextTokenType.OperandSeparatorToken, ", ")
+
+
 def imm(i):
     return InstructionTextToken(InstructionTextTokenType.IntegerToken, hex(i))
+
+
 def mem_start():
     return InstructionTextToken(InstructionTextTokenType.BeginMemoryOperandToken, "(")
+
+
 def mem_end():
     return InstructionTextToken(InstructionTextTokenType.EndMemoryOperandToken, ")")
+
+
 def possible_address(addr):
     return InstructionTextToken(InstructionTextTokenType.PossibleAddressToken, hex(addr))
+
 
 class RiscVInstruction:
     def __init__(self, data, addr, little_endian=True):
@@ -92,12 +106,16 @@ class RiscVInstruction:
 
     def is_branch(self):
         return self.name in branch_ins
+
     def is_direct_jump(self):
         return self.name in direct_jump_ins
+
     def is_indirect_jump(self):
         return self.name in indirect_jump_ins
+
     def is_direct_call(self):
         return self.name in direct_call_ins
+
     def is_indirect_call(self):
         return self.name in indirect_call_ins
 
@@ -420,10 +438,13 @@ class RiscVInstruction:
 
     def _set_reg(self, il, reg, val):
         il.append(il.set_reg(4, reg, val))
+
     def _set_reg_const(self, il, reg, val):
         il.append(il.set_reg(4, reg, il.const(4, val & 0xffffffff)))
+
     def _set_reg_reg(self, il, reg, reg2):
         il.append(il.set_reg(4, reg, il.reg(4, reg2)))
+
     def _cond_branch(self, il, cond, imm):
         dest = il.add(4, il.const(4, il.current_address), il.const(4, imm))
         t = il.get_label_for_address(Architecture["riscv"], il.current_address + imm)
@@ -444,6 +465,7 @@ class RiscVInstruction:
             il.append(il.jump(dest))
         if mark_f:
             il.mark_label(f)
+
     def _branch(self, il, cond_f, instr, zero=False):
         if zero:
             o2 = il.const(4, 0)
@@ -451,9 +473,11 @@ class RiscVInstruction:
             o2 = il.reg(4, instr.operands[1])
         cond = cond_f(4, il.reg(4, instr.operands[0]), o2)
         self._cond_branch(il, cond, instr.imm)
+
     def _load(self, il, instr, size, extend):
         offset = il.add(4, il.reg(4, instr.operands[1]), il.const(4, instr.imm))
         self._set_reg(il, instr.operands[0], extend(4, il.load(size, offset)))
+
     def _store(self, il, instr, size):
         offset = il.add(4, il.reg(4, instr.operands[1]), il.const(4, instr.imm))
         if instr.operands[0] == "zero":
@@ -467,7 +491,7 @@ class RiscVInstruction:
 
         if self.imm is not None:
             label = il.get_label_for_address(Architecture["riscv"],
-                                        self.addr + self.imm)
+                                             self.addr + self.imm)
 
         name = self.name[2:] if self.name.startswith("c.") else self.name
 
@@ -554,7 +578,8 @@ class RiscVInstruction:
                     rhs = il.const(4, self.imm)
                 else:
                     rhs = il.reg(4, self.operands[2])
-                self._set_reg(il, self.operands[0], il.xor_expr(4, il.reg(4, self.operands[1]), rhs))
+                self._set_reg(il, self.operands[0], il.xor_expr(
+                    4, il.reg(4, self.operands[1]), rhs))
             case "or" | "ori":
                 if self.name[-1] == "i":
                     rhs = il.const(4, self.imm)
@@ -566,37 +591,43 @@ class RiscVInstruction:
                     rhs = il.const(4, self.imm)
                 else:
                     rhs = il.reg(4, self.operands[2])
-                self._set_reg(il, self.operands[0], il.and_expr(4, il.reg(4, self.operands[1]), rhs))
+                self._set_reg(il, self.operands[0], il.and_expr(
+                    4, il.reg(4, self.operands[1]), rhs))
             case "sll" | "slli":
                 if self.name[-1] == "i":
                     rhs = il.const(4, self.imm)
                 else:
                     rhs = il.reg(4, self.operands[2])
-                self._set_reg(il, self.operands[0], il.shift_left(4, il.reg(4, self.operands[1]), rhs))
+                self._set_reg(il, self.operands[0], il.shift_left(
+                    4, il.reg(4, self.operands[1]), rhs))
             case "srl" | "srli":
                 if self.name[-1] == "i":
                     rhs = il.const(4, self.imm)
                 else:
                     rhs = il.reg(4, self.operands[2])
-                self._set_reg(il, self.operands[0], il.logical_shift_right(4, il.reg(4, self.operands[1]), rhs))
+                self._set_reg(il, self.operands[0], il.logical_shift_right(
+                    4, il.reg(4, self.operands[1]), rhs))
             case "sra" | "srai":
                 if self.name[-1] == "i":
                     rhs = il.const(4, self.imm)
                 else:
                     rhs = il.reg(4, self.operands[2])
-                self._set_reg(il, self.operands[0], il.arith_shift_right(4, il.reg(4, self.operands[1]), rhs))
+                self._set_reg(il, self.operands[0], il.arith_shift_right(
+                    4, il.reg(4, self.operands[1]), rhs))
             case "slt" | "slti":
                 if self.name[-1] == "i":
                     rhs = il.const(4, self.imm)
                 else:
                     rhs = il.reg(4, self.operands[2])
-                self._set_reg(il, self.operands[0], il.compare_signed_less_than(4, il.reg(4, self.operands[1]), rhs))
+                self._set_reg(il, self.operands[0], il.compare_signed_less_than(
+                    4, il.reg(4, self.operands[1]), rhs))
             case "sltu" | "sltiu":
                 if self.name[-2] == "i":
                     rhs = il.const(4, self.imm)
                 else:
                     rhs = il.reg(4, self.operands[2])
-                self._set_reg(il, self.operands[0], il.compare_unsigned_less_than(4, il.reg(4, self.operands[1]), rhs))
+                self._set_reg(il, self.operands[0], il.compare_unsigned_less_than(
+                    4, il.reg(4, self.operands[1]), rhs))
             case "nop" | "fence":
                 il.append(il.nop())
             case "ecall":
@@ -607,7 +638,7 @@ class RiscVInstruction:
                 self._set_reg_reg(il, self.operands[0], self.operands[1])
             case "li":
                 self._set_reg_const(il, self.operands[0], self.imm)
-            case other:
+            case _:
                 log_warn(f"Can't lift instruction {self.name}")
 
         return self.instr_size

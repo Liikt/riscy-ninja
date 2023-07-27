@@ -3,6 +3,7 @@ from binaryninja import Architecture, Endianness, RegisterInfo
 from .base_instruction import RiscVInstruction
 from .registers import all_regs
 
+
 class RISCV(Architecture):
     name = "riscv"
 
@@ -14,7 +15,8 @@ class RISCV(Architecture):
 
     endianness = Endianness.LittleEndian
 
-    regs = {x: RegisterInfo(x, 4) if not x.startswith("f") or x == "fp" else RegisterInfo(x, 16) for x in all_regs}
+    regs = {x: RegisterInfo(x, 4) if not x.startswith("f")
+            else RegisterInfo(x, 16) for x in all_regs}
 
     stack_pointer = "sp"
 
