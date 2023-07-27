@@ -327,7 +327,7 @@ class CompressedInstruction:
             hi, lo = (IMMI_HI_BIT(self.data), IMMI_LO_BITS(self.data))
             self.operands.append(IntRegister(reg).name)
             self.operands.append("sp")
-            self.imm = (lo & 0b11) << 6 | hi << 5 | (lo >> 2) << 4
+            self.imm = (lo & 0b11) << 6 | hi << 5 | (lo >> 2) << 2
             self.name = "c.lwsp"
             self.type = "css"
 
