@@ -74,9 +74,6 @@ class RiscVInstruction:
         self.type = compressed.type
         self.instr_size = 2
 
-        if self.name == "c.li":
-            print(f"{self.name=} {self.imm=}")
-
         if compressed.type is None:
             self.instr_size = 4
             data = data[:4]
