@@ -379,7 +379,7 @@ class RiscVInstruction:
                     info.append(reg(self.operands[1]))
                     info.append(op_sep())
                     info.append(imm(self.imm))
-            case "s" | "cs" | "css":
+            case "s" | "cs" | "css" | "cl" | "ciw":
                 info.append(reg(self.operands[0]))
                 info.append(op_sep())
                 info.append(imm(self.imm))
@@ -410,13 +410,6 @@ class RiscVInstruction:
                 self._pseudo_instr_token(info)
             case "cj":
                 info.append(possible_address(self.addr + self.imm))
-            case "cl":
-                info.append(reg(self.operands[0]))
-                info.append(op_sep())
-                info.append(imm(self.imm))
-                info.append(mem_start())
-                info.append(reg(self.operands[1]))
-                info.append(mem_end())
             case _:
                 log_warn(f"Don't know {self.type} instruction type")
         return info, self.instr_size

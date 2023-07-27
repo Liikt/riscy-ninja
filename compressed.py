@@ -110,7 +110,8 @@ class CompressedInstruction:
 
         if op == 0b00 and funct3 == 0b000:
             if self.data and IMMW_BITS(self.data):
-                self.operands.append(IntRegister(RDP_BITS(self.data)).name)
+                self.operands.append(IntRegister(RDP_BITS(self.data) + 8).name)
+                self.operands.append("sp")
                 imm = IMMW_BITS(self.data)
                 self.imm = ((imm >> 2) & 0b1111) << 6 | ((imm >> 6) & 0b11) << 3 | \
                     (imm & 0b1) << 3 | ((imm >> 1) & 0b1) << 2
