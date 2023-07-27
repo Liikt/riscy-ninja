@@ -4,7 +4,7 @@ from binaryninja import InstructionTextToken, InstructionTextTokenType, \
 from struct import unpack, error
 
 from .registers import IntRegister
-from .utils import extract_bit
+from .utils import extract_bit, sign_extend
 
 direct_jump_ins   = {'c.j'}
 indirect_jump_ins = {'c.jr'}
@@ -163,7 +163,7 @@ class CompressedInstruction:
             elif hi or lo:
                 self.operands.append(IntRegister(RD_BITS(self.data)).name)
                 self.operands.append(IntRegister(RD_BITS(self.data)).name)
-                self.imm = hi << 5 | lo
+                self.imm = sign_extend(hi << 5 | lo, 6)
                 self.name = "c.addi"
                 self.type = "ci"
             else:

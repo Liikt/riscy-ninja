@@ -342,7 +342,9 @@ class RiscVInstruction:
                 token.append(imm(self.imm))
             case "c.beqz" | "c.bnez":
                 token.append(reg(self.operands[0]))
-            case other:
+                token.append(op_sep())
+                token.append(possible_address(self.addr + self.imm))
+            case _:
                 log_warn(f"Can't get token for pseudo instruction {self.name}")
 
     def token(self):
