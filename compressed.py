@@ -207,6 +207,7 @@ class CompressedInstruction:
                 self.imm = hi << 5 | lo
                 self.name = "c.lui"
             self.operands.append(IntRegister(RD_BITS(self.data)).name)
+            self.operands.append("sp")
             self.type = "cu"
 
         elif op == 0b01 and funct3 == 0b100:

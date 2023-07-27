@@ -526,14 +526,17 @@ class RiscVInstruction:
                 self._load(il, self, 2, il.sign_extend)
             case "lhu":
                 self._load(il, self, 2, il.zero_extend)
-            case "lw":
+            case "lw" | "lwsp":
                 self._load(il, self, 4, il.sign_extend)
             case "sb":
                 self._store(il, self, 1)
             case "sh":
                 self._store(il, self, 2)
-            case "sw":
+            case "sw" | "swsp":
                 self._store(il, self, 4)
+            case "addi16sp" | "addi4spn":
+                rhs = il.const(4, self.imm)
+                self._set_reg(il, self.operands[0], il.add(4, il.reg(4, self.operands[1]), rhs))
             case "add" | "addi":
                 if self.name[-1] == "i":
                     rhs = il.const(4, self.imm)
