@@ -199,8 +199,9 @@ class CompressedInstruction:
                 return
 
             if reg == 2:
-                self.imm = hi << 9 | ((lo >> 1) & 0b11) << 7 | ((lo >> 4) & 0b1) << 6 | \
-                    (lo & 0b1) << 5 | (lo >> 5) << 4
+                self.imm = hi << 9 | extract_bit(lo, 1, 2) << 7 | extract_bit(lo, 3, 1) << 6 | \
+                    extract_bit(lo, 0, 1) << 5 | extract_bit(lo, 4, 1) << 4
+                self.imm = sign_extend(self.imm, 9)
                 self.name = "c.addi16sp"
             else:
                 self.imm = hi << 5 | lo
