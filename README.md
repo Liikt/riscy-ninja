@@ -13,14 +13,14 @@ all hardware registers like `pmp_addr_...`.
 
 # TODO
 
-[x] `RV32I` instructions
-[ ] `RV64I` instructions
-[ ] `RV128I` instructions
-[ ] `M` instructions
-[ ] `A` instructions
-[ ] `Zicsr` instructions
-[ ] `F` instructions
-[ ] `D` instructions
-[ ] `Q` instructions
-[x] `C` instructions
-[ ] priviledged instructions
+* [x] `RV32I` instructions
+* [ ] `RV64I` instructions
+* [ ] `RV128I` instructions
+* [ ] `M` instructions
+* [ ] `A` instructions
+* [ ] `Zicsr` instructions
+* [ ] `F` instructions
+* [ ] `D` instructions
+* [ ] `Q` instructions
+* [x] `C` instructions
+* [ ] priviledged instructions
