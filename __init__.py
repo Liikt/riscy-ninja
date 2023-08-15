@@ -1,6 +1,6 @@
 import binaryninja
 from .riscv import RISCV
-from .registers import RiscVRegisters
+from .extensions.register import RiscVRegisters
 
 RISCV.register()
 

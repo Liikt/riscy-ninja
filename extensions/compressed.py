@@ -1,16 +1,14 @@
-from binaryninja import InstructionTextToken, InstructionTextTokenType, \
-    log_warn, log_debug
+from struct import unpack
 
-from struct import unpack, error
+from binaryninja import log_debug, log_warn, Architecture, LLIL_TEMP
 
-from .registers import IntRegister
-from .utils import extract_bit, sign_extend
+from .utils import sign_extend, extract_bit, inst, reg, op_sep, imm, \
+    possible_address, tokenize_mem_insn, tokenize_reg_insn, tokenize_imm_insn, \
+    tokenize_uppr_insn, tokenize_jmp_insn, set_reg, set_reg_const, set_reg_reg, \
+    load, store, branch
+from .register import IntRegister
+from .instruction import RVInstruction
 
-direct_jump_ins   = {'c.j'}
-indirect_jump_ins = {'c.jr'}
-direct_call_ins   = {'c.jal'}
-indirect_call_ins = {'c.jalr'}
-branch_ins        = {'c.beqz', 'c.bnez'}
 
 # CR-Type
 OPCODE_BITS = lambda x: ((x >> 0)  & 0b11   )
@@ -50,72 +48,18 @@ OFFSET_HI_BITS = lambda x: ((x >> 10) & 0b111  )
 JUMP_TGT_BITS = lambda x: ((x >> 2) & 0b11111111111)
 
 
-def inst(cont):
-    return InstructionTextToken(InstructionTextTokenType.InstructionToken, cont)
+class CompressedInstruction(RVInstruction):
+    def __init__(self, addr, data, xlen, flen, little_endian=True):
+        super().__init__(addr, data, xlen, flen, little_endian)
+        if len(data) < 2:
+            return None
 
+        format = "<H" if little_endian else ">H"
+        self.data = unpack(format, data[:2])[0]
+        self.insn_size = 2
 
-def reg(cont):
-    return InstructionTextToken(InstructionTextTokenType.RegisterToken, cont)
-
-
-def op_sep():
-    return InstructionTextToken(InstructionTextTokenType.OperandSeparatorToken, ", ")
-
-
-def imm(i):
-    return InstructionTextToken(InstructionTextTokenType.IntegerToken, hex(i))
-
-
-def mem_start():
-    return InstructionTextToken(InstructionTextTokenType.BeginMemoryOperandToken, "(")
-
-
-def mem_end():
-    return InstructionTextToken(InstructionTextTokenType.EndMemoryOperandToken, ")")
-
-
-def possible_address(addr):
-    return InstructionTextToken(InstructionTextTokenType.PossibleAddressToken, hex(addr))
-
-
-class CompressedInstruction:
-    def __init__(self, data, addr, little_endian=True):
-        if len(data) == 1:
-            return
-        data = data[:2]
-        self.size = 32
-        try:
-            if little_endian:
-                self.data = unpack("<H", data)[0]
-            else:
-                self.data = unpack(">H", data)[0]
-        except error as e:
-            print(data, addr)
-            raise e
-        self.addr = addr
-        self.imm = None
-        self.name = ""
-        self.operands = []
-        self.instr_size = 2
-        self.type = None
-
-    def is_branch(self):
-        return self.name in branch_ins
-
-    def is_direct_jump(self):
-        return self.name in direct_jump_ins
-
-    def is_indirect_jump(self):
-        return self.name in indirect_jump_ins
-
-    def is_direct_call(self):
-        return self.name in direct_call_ins
-
-    def is_indirect_call(self):
-        return self.name in indirect_call_ins
-
-    def disassemble(self):
-        if self.size != 32:
+    def _disassemble(self):
+        if self.xlen != 32:
             log_warn("Compressed instructions for XLEN != 32 currently not supported")
             return
         if not self.data:
@@ -176,7 +120,7 @@ class CompressedInstruction:
             hi, lo = (IMMI_HI_BIT(self.data), IMMI_LO_BITS(self.data))
             if not RD_BITS(self.data) and (hi or lo):
                 self.name = "c.nop"
-                self.type = "ci"
+                self.type = "pseudo"
             elif hi or lo:
                 self.operands.append(IntRegister(RD_BITS(self.data)).name)
                 self.operands.append(IntRegister(RD_BITS(self.data)).name)
@@ -187,7 +131,7 @@ class CompressedInstruction:
                 log_debug("Possibly not a compressed ci type")
                 return
         elif op == 0b01 and funct3 == 0b001:
-            if self.size != 32:
+            if self.xlen != 32:
                 log_warn("c.addiw not yet supported")
                 return
             else:
@@ -206,7 +150,7 @@ class CompressedInstruction:
                 self.operands.append(IntRegister(RD_BITS(self.data)).name)
                 self.imm = IMMI_HI_BIT(self.data) << 5 | IMMI_LO_BITS(self.data)
                 self.name = "c.li"
-                self.type = "ci"
+                self.type = "pseudo"
 
         elif op == 0b01 and funct3 == 0b011:
             hi, lo, reg = (IMMI_HI_BIT(self.data), IMMI_LO_BITS(self.data), RD_BITS(self.data))
@@ -366,20 +310,22 @@ class CompressedInstruction:
                 self.name = "c.ebreak"
                 self.type = "ecall"
             elif not bit and reg1 and not reg2:
+                self.operands.append("zero")
                 self.operands.append(IntRegister(reg1).name)
+                self.imm = 0
                 self.name = "c.jr"
-                self.type = "cj"
+                self.type = "cjr"
             elif not bit and reg1 and reg2:
                 self.operands.append(IntRegister(reg1).name)
                 self.operands.append(IntRegister(reg2).name)
                 self.name = "c.mv"
-                self.type = "cr"
+                self.type = "pseudo"
             elif bit and reg1 and not reg2:
                 self.operands.append("ra")
                 self.operands.append(IntRegister(reg1).name)
                 self.imm = 0
                 self.name = "c.jalr"
-                self.type = "ci"
+                self.type = "cjr"
             elif bit and reg1 and reg2:
                 self.operands.append(IntRegister(reg1).name)
                 self.operands.append(IntRegister(reg1).name)
@@ -405,3 +351,161 @@ class CompressedInstruction:
         elif op == 0b10 and funct3 == 0b111:
             log_warn("c.fswsp and c.sdsp not yet supported")
             return
+
+        self.disassebled = True
+
+    def pseudo_instructions(self):
+        old = self.type
+        self.type = "pseudo"
+        if self.name == "c.jr" and self.operands[1] == "ra":
+            self.name = "c.ret"
+        else:
+            self.type = old
+
+    def disassemble(self):
+        if self.type is None:
+            self._disassemble()
+        self.pseudo_instructions()
+
+    def _pseudo_insn_token(self, info):
+        match self.name:
+            case "c.nop" | "c.ret":
+                pass
+            case "c.mv":
+                info.append(reg(self.operands[0]))
+                info.append(op_sep())
+                info.append(reg(self.operands[1]))
+            case "c.li":
+                info.append(reg(self.operands[0]))
+                info.append(op_sep())
+                info.append(imm(self.imm))
+            case other:
+                print(f"Don't know compressed pseudo instruction {other}")
+
+    def token(self):
+        self.disassemble()
+        if not self.disassebled:
+            return None
+
+        info = [inst(self.name.ljust(17))]
+
+        match self.type:
+            case "cb":
+                tokenize_jmp_insn(info, self.operands[0], self.addr + self.imm)
+            case "cu":
+                tokenize_uppr_insn(info, self.operands[0], self.imm)
+            case "cr":
+                tokenize_reg_insn(info, self.operands[0], self.operands[0], self.operands[1])
+            case "css" | "cs" | "cl":
+                tokenize_mem_insn(info, self.operands[0], self.operands[1], self.imm)
+            case "ciw" | "ci":
+                tokenize_imm_insn(info, self.operands[0], self.operands[1], self.imm)
+            case "ca":
+                tokenize_reg_insn(info, self.operands[0], self.operands[1], self.operands[2])
+            case "cj":
+                info.append(possible_address(self.addr + self.imm))
+            case "cjr":
+                tokenize_mem_insn(info, self.operands[0], self.operands[1], self.imm)
+            case "pseudo":
+                self._pseudo_insn_token(info)
+            case other:
+                log_warn(f"Can't produce token for {other} compressed type")
+
+        return info, self.insn_size
+
+    def lift(self, il):
+        self.disassemble()
+        if not self.disassebled:
+            return None
+
+        if self.imm is not None:
+            label = il.get_label_for_address(Architecture["riscv"],
+                                             self.addr + self.imm)
+
+        match self.name:
+            case "c.addi16sp" | "c.addi4spn" | "c.addi":
+                rhs = il.const(self.xlen // 8, self.imm)
+                set_reg(il, self.operands[0], il.add(
+                    self.xlen // 8, il.reg(self.xlen // 8, self.operands[1]), rhs), self.xlen)
+            case "c.add":
+                set_reg(il, self.operands[0], il.add(
+                    self.xlen // 8, il.reg(self.xlen // 8, self.operands[1]),
+                        il.reg(self.xlen // 8, self.operands[2])), self.xlen)
+            case "c.sub":
+                set_reg(il, self.operands[0], il.sub(
+                    self.xlen // 8, il.reg(self.xlen // 8, self.operands[1]),
+                        il.reg(self.xlen // 8, self.operands[2])), self.xlen)
+            case "c.j" | "c.jal":
+                if "al" in self.name:
+                    set_reg_const(il, self.operands[0], self.addr + 2, self.xlen)
+
+                if label is not None:
+                    il.append(il.goto(label))
+                else:
+                    il.append(il.jump(il.const(self.xlen // 8, self.addr + self.imm)))
+            case "c.jr" | "c.jalr":
+                if "al" in self.name:
+                    set_reg_reg(il, LLIL_TEMP(0), self.operands[1], self.xlen)
+
+                base = il.reg(self.xlen // 8, LLIL_TEMP(0))
+                if self.operands[0] != "zero":
+                    set_reg_const(il, self.operands[0],
+                                  self.addr + self.insn_size, self.xlen)
+                dest = base
+                if self.imm:
+                    set_reg(il, LLIL_TEMP(0), il.add(self.xlen // 8, base,
+                            il.const(self.xlen // 8, self.imm)), self.xlen)
+                    dest = il.reg(self.xlen // 8, LLIL_TEMP(0))
+                if self.operands[0] == "zero":
+                    il.append(il.jump(dest))
+                else:
+                    il.append(il.call(dest))
+            case "c.ret":
+                il.append(il.ret(il.reg(self.xlen // 8, "ra")))
+            case "c.or":
+                set_reg(il, self.operands[0], il.or_expr(
+                    self.xlen // 8, il.reg(self.xlen // 8, self.operands[1]),
+                        il.reg(self.xlen // 8, self.operands[2])), self.xlen)
+            case "c.xor":
+                set_reg(il, self.operands[0], il.xor_expr(
+                    self.xlen // 8, il.reg(self.xlen // 8, self.operands[1]),
+                        il.reg(self.xlen // 8, self.operands[2])), self.xlen)
+            case "c.and" | "c.andi":
+                if self.name.endswith("i"):
+                    rhs = il.const(self.xlen // 8, self.imm)
+                else:
+                    rhs = il.reg(self.xlen // 8, self.operands[2])
+                set_reg(il, self.operands[0], il.and_expr(
+                    self.xlen // 8, il.reg(self.xlen // 8, self.operands[1]),
+                        rhs), self.xlen)
+            case "c.slli":
+                set_reg(il, self.operands[0], il.shift_left(
+                    self.xlen // 8, il.reg(self.xlen // 8, self.operands[1]),
+                    il.const(self.xlen // 8, self.imm)), self.xlen)
+            case "c.lw" | "c.lwsp":
+                load(il, self, 4, il.sign_extend, self.xlen)
+            case "c.sw" | "c.swsp":
+                store(il, self, 4, self.xlen)
+            case "c.mv":
+                set_reg_reg(il, self.operands[0], self.operands[1], self.xlen)
+            case "c.li" | "c.lui":
+                imm = self.imm
+                if "u" in self.name:
+                    imm = imm << 12
+                set_reg_const(il, self.operands[0], imm, self.xlen)
+            case "c.beqz":
+                branch(il, il.compare_equal, self, self.xlen, zero=True)
+            case "c.bnez":
+                branch(il, il.compare_not_equal, self, self.xlen, zero=True)
+            case other:
+                log_warn(f"Can't lift '{other}' instruction")
+
+        return self.insn_size
+
+
+"""
+            case "c.beqz" | "c.bnez":
+                token.append(reg(self.operands[0]))
+                token.append(op_sep())
+                token.append(possible_address(self.addr + self.imm))
+"""
